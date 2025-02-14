@@ -10,5 +10,5 @@ Features:
 - Date Analysis: Obtain the number of delays by date.
 
 Endpoints:
-GET /delays → Fetch all delay records
-GET /delays_date=<YYYY-MM-DD> → Get delays for a specific date
+- GET /delays → Fetch all delay records
+- GET /delays_date=<YYYY-MM-DD> → Get delays for a specific date
