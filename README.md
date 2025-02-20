@@ -16,7 +16,6 @@ The Bus Delay API provides historical data on school bus delays. This API helps 
 - Format Flexibility: Retrieve data in JSON or CSV format.
 
 ### Endpoints
-- GET / Echoes: the request details for debugging purposes
 - GET /date?date=<YYYY-MM-DD>: Obtain the number of delays for a specific date. This data includs dates from September 3, 2024 to January 28, 2025.
 - GET /reason?reason=<REASON>: Retrieve the number of delays for a specific reason. REASON includes Accident, Delayed by School, Flat Tire, Heavy Traffic, Late return from Field Trip, Mechanical Problem, Problem Run, Weather Conditions, Won`t Start, and Other.
 - GET /boro?boro=<BOROUGH>: Retrieve the number of delays for a specific borough. BOROUGH includes All Boroughs, Brooklyn, Bronx, Connecticut, Manhattan, Nassau County, New Jersey, Queens, Rockland County, Staten Island and Westchester
