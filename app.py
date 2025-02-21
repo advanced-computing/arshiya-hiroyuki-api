@@ -14,11 +14,14 @@ def echo():
     print("-----END-----")
     return "see console"
 
-df = pd.read_csv("bus_2024_2025.csv")
-df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p')
+def load_data():
+    df = pd.read_csv("bus_2024_2025.csv")
+    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p')
+    return df
 
 @app.route("/date", methods=["GET"])
 def get_date_data():
+    df = load_data()
     date = request.args.get("date")
     date = pd.to_datetime(date).date()
     num = df[df['Occurred_On'].dt.date == date].shape[0]
@@ -26,18 +29,21 @@ def get_date_data():
 
 @app.route("/reason", methods=["GET"])
 def get_reason_data():
+    df = load_data()
     reason = request.args.get("reason")
     num = df[df['Reason'] == reason].shape[0]
     return jsonify(count=num)
 
 @app.route("/boro", methods=["GET"])
 def get_boro_data():
+    df = load_data()
     boro = request.args.get("boro")
     num = df[df['Boro'] == boro].shape[0]
     return jsonify(count=num)
 
 @app.route("/date_records", methods=["GET"])
 def get_data_by_date():
+    df = load_data()
     date = request.args.get("date")
     output_format = request.args.get("format", "json") 
     try:
@@ -54,6 +60,7 @@ def get_data_by_date():
     
 @app.route("/records", methods=["GET"])
 def list_records():
+    df = load_data()
     output_format = request.args.get("format", "json")
     column = request.args.get("column")
     value = request.args.get("value")
@@ -73,6 +80,7 @@ def list_records():
 
 @app.route("/record/<int:id>", methods=["GET"])
 def get_record_by_id(id):
+    df = load_data()
     record = df[df["Busbreakdown_ID"] == id]
     if record.empty:
         return jsonify(error="Record not found"), 404
