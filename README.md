@@ -41,7 +41,7 @@ Fetch all delays for a specific date (CSV format):
 - GET /date_records?date=2024-09-27&format=csv
 
 Fetch records with pagination:
-- GET /records?format=jason&column=Reason&value=Heavy%20Traffic&limit=5&offset=0
+- GET /records?format=json&column=Reason&value=Heavy%20Traffic&limit=5&offset=0
 
 Fetch a specific record by ID:
 - GET /record/1933906?format=json
