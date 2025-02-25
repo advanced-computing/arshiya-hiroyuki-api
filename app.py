@@ -16,7 +16,8 @@ def echo():
 
 def load_data():
     df = pd.read_csv("bus_2024_2025.csv")
-    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p')
+    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], 
+                                       format='%m/%d/%Y %I:%M:%S %p').dt.date
     return df
 
 @app.route("/date", methods=["GET"])
@@ -24,7 +25,7 @@ def get_date_data():
     df = load_data()
     date = request.args.get("date")
     date = pd.to_datetime(date).date()
-    num = df[df['Occurred_On'].dt.date == date].shape[0]
+    num = df[df['Occurred_On'] == date].shape[0]
     return jsonify(count=num)
 
 @app.route("/reason", methods=["GET"])
@@ -48,7 +49,7 @@ def get_data_by_date():
     output_format = request.args.get("format", "json") 
     try:
         date = pd.to_datetime(date).date()
-        result = df[df['Occurred_On'].dt.date == date]
+        result = df[df['Occurred_On'] == date]
         if result.empty:
             return jsonify(message="No Records"), 404
         if output_format == "csv":
