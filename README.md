@@ -7,6 +7,10 @@
 ### Overview
 The Bus Delay API provides historical data on school bus delays. This API helps analyze delay trends, identify causes, and improve transit planning by offering various endpoints to query and filter data based on different criteria.
 
+Data Profiling
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1g7HjVpAOFsEBa6o4IosON7ndwgSL8oHq?usp=sharing)
+
 ### Features
 - Date Analysis: Obtain the number of delays by date.
 - Reason Analysis: Retrieve the number of delays based on a specific reason.
