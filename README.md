@@ -21,8 +21,9 @@ Data Profiling
 
 ### Endpoints
 - GET /date?date=<YYYY-MM-DD>: Obtain the number of delays for a specific date. This data includs dates from September 3, 2024 to January 28, 2025.
-- GET /reason?reason=<REASON>: Retrieve the number of delays for a specific reason. REASON includes Accident, Delayed by School, Flat Tire, Heavy Traffic, Late return from Field Trip, Mechanical Problem, Problem Run, Weather Conditions, Won`t Start, and Other.
-- GET /boro?boro=<BOROUGH>: Retrieve the number of delays for a specific borough. BOROUGH includes All Boroughs, Brooklyn, Bronx, Connecticut, Manhattan, Nassau County, New Jersey, Queens, Rockland County, Staten Island and Westchester
+- GET /reason?reason=<REASON>: Retrieve the number of delays for a specific reason. REASON includes 'Heavy Traffic', 'Mechanical Problem', 'Problem Run', 'Delayed by School', 'Won`t Start', 'Accident', 'Flat Tire', 'Weather Conditions', and 'Late return from Field Trip', and 'Other',
+  
+- GET /boro?boro=<BOROUGH>: Retrieve the number of delays for a specific borough. BOROUGH includes All areas, 'Brooklyn', 'Bronx', 'Queens', 'Manhattan', 'Nassau County', 'Staten Island', 'Westchester', 'All Boroughs', 'New Jersey', 'Rockland County', and 'Connecticut'.
 - GET /date_records?date=<YYYY-MM-DD>&format=<json|csv>: Fetch all records for a specific date in the specified format.
 - GET /records?format=<json|csv>&column=<COLUMN>&value=<VALUE>&limit=<LIMIT>&offset=<OFFSET>: List records with optional filtering based on a specific column, value, limit, and offset.
 - GET /record/<ID>?format=<json|csv>: Retrieve a single record by identifier in the specified format. The Busbreakdown_ID starts from 1933904 to 1972650, while the numbers jump around in the middle.
