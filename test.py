@@ -248,6 +248,9 @@ def test_id(dataframe):
 def test_id_completeness(dataframe):
     assert not dataframe['Busbreakdown_ID'].isnull().any()
 
+def test_date_type(dataframe):
+    assert all(isinstance(x, pd.Timestamp) for x in pd.to_datetime(dataframe['Occurred_On'], errors='coerce'))
+
 def test_date_range(dataframe):
     start_date = pd.Timestamp('2024-01-01')
     end_date = pd.Timestamp('2025-12-31')
