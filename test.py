@@ -9,7 +9,7 @@ from app import process_boro_request, empty_check, format_output
 
 app = Flask(__name__)
 
-# Step 1. Test Functions
+# Step1: Test Functions
 # Create Test Data
 def load_test_data():
     data = '''Busbreakdown_ID,Occurred_On,Reason,Boro
@@ -62,7 +62,7 @@ def test_format_output(df):
         output_json = format_output(df, 'json')
         assert '"Busbreakdown_ID":' in output_json
 
-# Step 2. Test APIs 
+# Step2: Test APIs 
 # Run app.py in the background.
 # Set Test Environment and functions.
 api_url = "http://127.0.0.1:5000"
@@ -266,7 +266,7 @@ def test_id(dataframe):
         assert test.empty
         assert api_data.empty
         
-# Step 3. Test Data Quality
+# Step3: Test Data Quality
 def test_id_completeness(dataframe):
     assert not dataframe['Busbreakdown_ID'].isnull().any()
 

@@ -3,7 +3,7 @@ import pandas as pd
 
 app = Flask(__name__)
 
-# Functions
+# Functions for APIs
 def clean_data(data):
     data = data.map(lambda x: None if str(x).lower() in ['nan', 'none'] else x)
     data = data.reset_index(drop=True)
