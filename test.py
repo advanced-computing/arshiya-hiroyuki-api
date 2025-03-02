@@ -4,13 +4,13 @@ import requests
 import io
 from io import StringIO
 from flask import Flask
-from app import process_date_request, process_reason_request, process_boro_request
-from app import get_date_data, get_reason_data, get_boro_data
-from app import empty_check, format_output
+from app import process_date_request, process_reason_request
+from app import process_boro_request, empty_check, format_output
 
 app = Flask(__name__)
 
-# Test Functions
+# Step 1. Test Functions
+# Create Test Data
 def load_test_data():
     data = '''Busbreakdown_ID,Occurred_On,Reason,Boro
     1,02/27/2025 10:00:00 AM,Mechanical,Manhattan
@@ -19,9 +19,12 @@ def load_test_data():
     4,03/01/2025 08:00:00 AM,Weather,Queens'''
     
     df = pd.read_csv(StringIO(data))
-    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p').dt.date
+    df['Occurred_On'] = pd.to_datetime(
+        df['Occurred_On'], 
+        format='%m/%d/%Y %I:%M:%S %p').dt.date
     return df
 
+# Test
 @pytest.fixture
 def df():
     return load_test_data()
@@ -43,7 +46,9 @@ def test_process_boro_request(df):
 
 def test_empty_check():
     with app.app_context():
-        df_empty = pd.DataFrame(columns=['Busbreakdown_ID', 'Occurred_On', 'Reason', 'Boro'])
+        df_empty = pd.DataFrame(
+            columns=['Busbreakdown_ID', 'Occurred_On', 'Reason', 'Boro']
+            )
         assert empty_check(df_empty) is not None
 
         df_non_empty = load_test_data()
@@ -57,8 +62,9 @@ def test_format_output(df):
         output_json = format_output(df, 'json')
         assert '"Busbreakdown_ID":' in output_json
 
-# Test APIs (Run app.py in the background)
-# Set Test Environment
+# Step 2. Test APIs 
+# Run app.py in the background.
+# Set Test Environment and functions.
 api_url = "http://127.0.0.1:5000"
 
 def clean_data(data):
@@ -66,14 +72,19 @@ def clean_data(data):
     data = data.reset_index(drop=True)
     return data
 
+# Set Actual Downloaded Data
 @pytest.fixture
 def dataframe():
     df = pd.read_csv('bus_2024_2025.csv')
-    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p', errors='coerce').dt.date
+    df['Occurred_On'] = pd.to_datetime(
+        df['Occurred_On'],
+        format='%m/%d/%Y %I:%M:%S %p',
+        errors='coerce'
+        ).dt.date
     df = clean_data(df)
     return df
 
-# Count records by date:
+# Test API of Count records by date:
 def test_get_date_data(dataframe):
     test_date = dataframe.iloc[0]['Occurred_On']
     # test_date = datetime.date(2024, 9, 3) if you want to manually enter a date
@@ -82,9 +93,9 @@ def test_get_date_data(dataframe):
     test_url = f'{api_url}/date?date={test_date}'
     response = requests.get(test_url).json()
 
-    assert expected_count == response["count"]
+    assert expected_count == response['count']
 
-# Count records by reason:
+# Test API of Count records by reason:
 def test_get_reason_data(dataframe):
     test_reason = dataframe.iloc[0]['Reason']
     expected_count = dataframe[dataframe['Reason'] == test_reason].shape[0]
@@ -92,9 +103,9 @@ def test_get_reason_data(dataframe):
     test_url = f'{api_url}/reason?reason={test_reason}'
     response = requests.get(test_url).json()
 
-    assert expected_count == response["count"]
+    assert expected_count == response['count']
 
-# Count records by borough:
+# Test API of Count records by borough:
 def test_get_boro_data():
     test_boro = "NotaRealBoro"
     expected_count = 2
@@ -102,9 +113,9 @@ def test_get_boro_data():
     test_url = f'{api_url}/boro?boro={test_boro}'
     response = requests.get(test_url).json()
 
-    assert expected_count != response["count"]
+    assert expected_count != response['count']
 
-# Fetch all delays for a specific date (JSON format):
+# Test API of Fetch all delays for a specific date (JSON format):
 def get_expected_data_records(dataframe, dates):
     expected_data = []
     for test_date in dates:
@@ -128,7 +139,8 @@ def get_output_data_records_json(dates):
             api_data = pd.DataFrame([response_data])
 
         if 'Occurred_On' in api_data.columns:
-            api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], unit='ms').dt.date
+            api_data['Occurred_On'] = pd.to_datetime(
+                api_data['Occurred_On'], unit='ms').dt.date
         else:
             api_data = pd.DataFrame(columns=['Occurred_On'])
 
@@ -150,7 +162,7 @@ def test_date_records_json(dataframe):
     for expected, output in zip(false_expected_data, false_output_data):
         assert not expected.equals(output)
     
-# Fetch all delays for a specific date (CSV format):
+# Test API of Fetch all delays for a specific date (CSV format):
 def get_output_data_records_csv(dates):
     output_data = []
     for test_date in dates:
@@ -161,7 +173,8 @@ def get_output_data_records_csv(dates):
         api_data = pd.read_csv(io.StringIO(response_data))
         
         if 'Occurred_On' in api_data.columns:
-            api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], format='%Y-%m-%d').dt.date
+            api_data['Occurred_On'] = pd.to_datetime(
+                api_data['Occurred_On'], format='%Y-%m-%d').dt.date
         else:
             api_data = pd.DataFrame(columns=['Occurred_On'])
 
@@ -183,7 +196,7 @@ def test_date_records_csv(dataframe):
     for expected, output in zip(false_expected_data, false_output_data):
         assert not expected.equals(output)
         
-# Fetch records with pagination:
+# Test API of Fetch records with pagination:
 def test_pagination(dataframe):
     format = 'json'
     column = 'Reason'
@@ -192,23 +205,30 @@ def test_pagination(dataframe):
     offset = 0
     
     test = dataframe[dataframe[column] == value].iloc[offset:offset + limit]
-
-    url = f'{api_url}/records?format={format}&column={column}&value={value}&limit={limit}&offset={offset}'
+    
+    url = (
+    f'{api_url}/records?format={format}'
+    f'&column={column}&value={value}'
+    f'&limit={limit}&offset={offset}'
+    )
+    
     response = requests.get(url)
     
     if format == 'json':
         api_data = pd.DataFrame(response.json())
-        api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], unit='ms').dt.date
+        api_data['Occurred_On'] = pd.to_datetime(
+            api_data['Occurred_On'], unit='ms').dt.date
     elif format == 'csv':
         api_data = pd.read_csv(io.StringIO(response.text))
-        api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], format='%Y-%m-%d').dt.date
+        api_data['Occurred_On'] = pd.to_datetime(
+            api_data['Occurred_On'], format='%Y-%m-%d').dt.date
 
     test = clean_data(test)
     api_data = clean_data(api_data)
     
     assert test.equals(api_data)
     
-# Fetch a specific record by ID:
+# Test API of Fetch a specific record by ID:
 def test_id(dataframe):
     true_ids = [1933906, 1933907, 1933908]
     false_ids = [1, 9999999]
@@ -218,7 +238,8 @@ def test_id(dataframe):
         url = f'{api_url}/record/{test_id}?format=json'
         response = requests.get(url)
         api_data = pd.DataFrame(response.json())
-        api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], unit='ms').dt.date
+        api_data['Occurred_On'] = pd.to_datetime(
+            api_data['Occurred_On'], unit='ms').dt.date
 
         test = clean_data(test)
         api_data = clean_data(api_data)
@@ -236,7 +257,8 @@ def test_id(dataframe):
         else:
             api_data = pd.DataFrame([response_data])
             if 'Occurred_On' in api_data.columns:
-                api_data['Occurred_On'] = pd.to_datetime(api_data['Occurred_On'], unit='ms').dt.date
+                api_data['Occurred_On'] = pd.to_datetime(
+                    api_data['Occurred_On'], unit='ms').dt.date
 
         test = clean_data(test)
         api_data = clean_data(api_data)
@@ -244,18 +266,20 @@ def test_id(dataframe):
         assert test.empty
         assert api_data.empty
         
-# Test Data Quality
+# Step 3. Test Data Quality
 def test_id_completeness(dataframe):
     assert not dataframe['Busbreakdown_ID'].isnull().any()
 
 def test_date_type(dataframe):
-    assert all(isinstance(x, pd.Timestamp) for x in pd.to_datetime(dataframe['Occurred_On'], errors='coerce'))
+    assert all(isinstance(x, pd.Timestamp) for x in pd.to_datetime(
+        dataframe['Occurred_On'], errors='coerce'))
 
 def test_date_range(dataframe):
-    start_date = pd.Timestamp('2024-01-01')
-    end_date = pd.Timestamp('2025-12-31')
+    start_date = pd.Timestamp('2024-09-03')
+    end_date = pd.Timestamp('2025-02-14')
     dataframe['Occurred_On'] = pd.to_datetime(dataframe['Occurred_On'])
-    assert all((dataframe['Occurred_On'] >= start_date) & (dataframe['Occurred_On'] <= end_date))
+    assert all((dataframe['Occurred_On'] >= start_date) 
+               & (dataframe['Occurred_On'] <= end_date))
     
 def test_boro_category(dataframe):
     boro_categories = ['Brooklyn', 'Bronx', 'Queens', 'Manhattan',
