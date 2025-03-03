@@ -3,93 +3,130 @@ import pandas as pd
 
 app = Flask(__name__)
 
-@app.route("/")
-def echo():
-    print("-----START-----")
-    print("Method:", request.method)
-    print("URL:", request.url)
-    print("Headers:\n")
-    print(request.headers)
-    print(f'Body: "{request.get_data(as_text=True)}"')
-    print("-----END-----")
-    return "see console"
+# Functions for APIs
+def clean_data(data):
+    data = data.map(lambda x: None if str(x).lower() in ['nan', 'none'] else x)
+    data = data.reset_index(drop=True)
+    return data
 
 def load_data():
-    df = pd.read_csv("bus_2024_2025.csv")
-    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], format='%m/%d/%Y %I:%M:%S %p')
+    df = pd.read_csv('bus_2024_2025.csv')
+    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], 
+                                        format='%m/%d/%Y %I:%M:%S %p').dt.date
+    df = clean_data(df)
     return df
 
-@app.route("/date", methods=["GET"])
-def get_date_data():
-    df = load_data()
-    date = request.args.get("date")
+def process_date_request(df, date, column):        
     date = pd.to_datetime(date).date()
-    num = df[df['Occurred_On'].dt.date == date].shape[0]
-    return jsonify(count=num)
+    num = df[df[column] == date].shape[0]
+    return num
 
-@app.route("/reason", methods=["GET"])
-def get_reason_data():
-    df = load_data()
-    reason = request.args.get("reason")
-    num = df[df['Reason'] == reason].shape[0]
-    return jsonify(count=num)
+def process_reason_request(df, reason, column):
+    num = df[df[column] == reason].shape[0]
+    return num
 
-@app.route("/boro", methods=["GET"])
-def get_boro_data():
-    df = load_data()
-    boro = request.args.get("boro")
-    num = df[df['Boro'] == boro].shape[0]
-    return jsonify(count=num)
+def process_boro_request(df, boro, column):
+    num = df[df[column] == boro].shape[0]
+    return num
 
-@app.route("/date_records", methods=["GET"])
-def get_data_by_date():
-    df = load_data()
-    date = request.args.get("date")
-    output_format = request.args.get("format", "json") 
+def empty_check(result):
+    if result.empty:
+        return jsonify(message='No Records')
+
+def format_output(df, output_format):
+    if output_format == 'csv':
+        return df.to_csv(index=False)
+    else:
+        return df.to_json(orient='records')
+
+# APIs
+@app.route('/')
+def echo():
+    print('-----START-----')
+    print('Method:', request.method)
+    print('URL:', request.url)
+    print('Headers:\n')
+    print(request.headers)
+    print(f'Body: {request.get_data(as_text=True)}')
+    print('-----END-----')
+    return 'see console'
+
+@app.route('/date', methods=['GET'])
+def get_date_data():
     try:
-        date = pd.to_datetime(date).date()
-        result = df[df['Occurred_On'].dt.date == date]
-        if result.empty:
-            return jsonify(message="No Records"), 404
-        if output_format == "csv":
-            return result.to_csv(index=False)
-        else:
-            return result.to_json(orient="records")
+        df = load_data()
+        column = 'Occurred_On'
+        date = request.args.get('date')
+        num = process_date_request(df, date, column)
+        return jsonify(count=num)
     except Exception as e:
-        return jsonify(error=str(e)), 400
+        return jsonify(error=str(e)), 500
+
+@app.route('/reason', methods=['GET'])
+def get_reason_data():
+    try:
+        df = load_data()
+        column = 'Reason'
+        reason = request.args.get('reason')
+        num =  process_reason_request(df, reason, column)
+        return jsonify(count=num)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+@app.route('/boro', methods=['GET'])
+def get_boro_data():
+    try:
+        df = load_data()
+        column = 'Boro'
+        boro = request.args.get('boro')
+        num = process_boro_request(df, boro, column)
+        return jsonify(count=num)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+   
+@app.route('/date_records', methods=['GET'])
+def get_data_by_date():
+    try:
+        df = load_data()
+        date = request.args.get('date')
+        date = pd.to_datetime(date).date()
+        result = df[df['Occurred_On'] == date]    
+        if empty_check(result):
+            return empty_check(result), 404    
+        output_format = request.args.get('format', 'json')
+        return format_output(result, output_format)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
     
-@app.route("/records", methods=["GET"])
+@app.route('/records', methods=['GET'])
 def list_records():
-    df = load_data()
-    output_format = request.args.get("format", "json")
-    column = request.args.get("column")
-    value = request.args.get("value")
-    limit = int(request.args.get("limit", 10))
-    offset = int(request.args.get("offset", 0))
+    try:
+        df = load_data()
+        column = request.args.get('column')
+        value = request.args.get('value')
+        limit = int(request.args.get('limit', 10))
+        offset = int(request.args.get('offset', 0))
+        if column and value:
+            result = df[df[column] == value]
+        result = result.iloc[offset:offset + limit]
+        if empty_check(result):
+            return empty_check(result), 404    
+        output_format = request.args.get('format', 'json')
+        return format_output(result, output_format)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
-    filtered_df = df
-    if column and value:
-        filtered_df = filtered_df[filtered_df[column] == value]
-
-    filtered_df = filtered_df.iloc[offset:offset + limit]
-
-    if output_format == "csv":
-        return filtered_df.to_csv(index=False)
-    else:
-        return filtered_df.to_json(orient="records")
-
-@app.route("/record/<int:id>", methods=["GET"])
+@app.route('/record/<int:id>', methods=['GET'])
 def get_record_by_id(id):
-    df = load_data()
-    record = df[df["Busbreakdown_ID"] == id]
-    if record.empty:
-        return jsonify(error="Record not found"), 404
-    else:
-        output_format = request.args.get("format", "json") 
-        if output_format == "csv":
-            return record.to_csv(index=False)
-        else:
-            return record.to_json(orient="records")
+    try:
+        df = load_data()
+        result = df[df['Busbreakdown_ID'] == id]
+        if empty_check(result):
+            return empty_check(result), 404    
+        output_format = request.args.get('format', 'json')
+        return format_output(result, output_format)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
