@@ -1,16 +1,32 @@
 from flask import Flask, jsonify, request
+import duckdb
 import pandas as pd
 
 app = Flask(__name__)
 
-# Functions for APIs
+# Functions
+def create_users_table():
+    con = duckdb.connect('bus.db')
+    con.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        username TEXT,
+        age INTEGER,
+        country TEXT
+    )
+    ''')
+    con.close()
+    
+create_users_table()
+    
 def clean_data(data):
     data = data.map(lambda x: None if str(x).lower() in ['nan', 'none'] else x)
     data = data.reset_index(drop=True)
     return data
 
 def load_data():
-    df = pd.read_csv('bus_2024_2025.csv')
+    con = duckdb.connect('bus.db')
+    df = con.execute('SELECT * FROM bus').fetchdf()
+    con.close()
     df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], 
                                         format='%m/%d/%Y %I:%M:%S %p').dt.date
     df = clean_data(df)
@@ -50,6 +66,60 @@ def echo():
     print(f'Body: {request.get_data(as_text=True)}')
     print('-----END-----')
     return 'see console'
+
+@app.route('/users', methods=['POST'])
+def add_user():
+    data = request.get_json()
+    username = data.get('username')
+    age = data.get('age')
+    country = data.get('country')
+
+    if not username or not isinstance(age, int) or age <= 0 or not country:
+        return jsonify({'error': 'Invalid input'}), 400
+
+    with duckdb.connect('bus.db') as con:
+        con.execute(
+            'INSERT INTO users (username, age, country) VALUES (?, ?, ?)',
+            (username, age, country)
+            )
+
+    return jsonify({'message': 'User added successfully.'}), 201
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    with duckdb.connect('bus.db') as con:
+        result = con.execute('SELECT * FROM users').fetchall()
+
+    users = [{
+        'username': row[0], 
+        'age': row[1], 
+        'country': row[2]
+        } for row in result]
+    return jsonify(users)
+
+@app.route('/users/delete_all', methods=['DELETE'])
+def delete_all_users():
+    with duckdb.connect('bus.db') as con:
+        con.execute('DELETE FROM users')
+
+    return jsonify({'message': 'All users have been deleted.'}), 200
+
+@app.route('/user_stats', methods=['GET'])
+def get_user_stats():
+    with duckdb.connect('bus.db') as con:
+        num_users = con.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        avg_age = con.execute('SELECT AVG(age) FROM users').fetchone()[0]
+        top_countries = con.execute('''
+            SELECT country, COUNT(*) as count FROM users 
+            GROUP BY country ORDER BY count DESC LIMIT 3
+        ''').fetchall()
+
+    return jsonify({
+        'num_users': num_users,
+        'avg_age': avg_age,
+        'top_countries': [{
+            'country': row[0], 'count': row[1]} for row in top_countries]
+    })
 
 @app.route('/date', methods=['GET'])
 def get_date_data():

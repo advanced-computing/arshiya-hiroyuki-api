@@ -7,10 +7,6 @@
 ### Overview
 The Bus Delay API provides historical data on school bus delays. This API helps analyze delay trends, identify causes, and improve transit planning by offering various endpoints to query and filter data based on different criteria.
 
-For data profiling, you can see the file from the following link.
-
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1gL7F68s0Me0sfwUb0SlFPBCmHteSW5MY?usp=sharing)
-
 ### Features
 - Date Analysis: Obtain the number of delays by date.
 - Reason Analysis: Retrieve the number of delays based on a specific reason.
@@ -20,6 +16,10 @@ For data profiling, you can see the file from the following link.
 - Format Flexibility: Retrieve data in JSON or CSV format.
 
 ### Endpoints
+- POST /users: This API creates a new user. The request body must include the user information (username, age, country). 
+- GET /users: This API retrieves all user information. The response will contain a list of users, with each user's username, age, and country data. 
+- DELETE /users/delete_all: This API deletes all users from the database.
+- GET /user_stats: This API provides statistics about the users, including the number of users, the average age, and the three countries with the most users.
 - GET /date?date=<YYYY-MM-DD>: Obtain the number of delays for a specific date. This data includs dates from September 3, 2024 to January 28, 2025.
 - GET /reason?reason=<REASON>: Retrieve the number of delays for a specific reason. REASON includes Accident, Delayed by School, Flat Tire, Heavy Traffic, Late return from Field Trip, Mechanical Problem, Problem Run, Weather Conditions, Won`t Start, and Other.
 - GET /boro?boro=<BOROUGH>: Retrieve the number of delays for a specific borough. BOROUGH includes All Boroughs, Brooklyn, Bronx, Connecticut, Manhattan, Nassau County, New Jersey, Queens, Rockland County, Staten Island and Westchester
@@ -28,6 +28,17 @@ For data profiling, you can see the file from the following link.
 - GET /record/<ID>?format=<json|csv>: Retrieve a single record by identifier in the specified format. The Busbreakdown_ID starts from 1933904 to 1972650, while the numbers jump around in the middle.
 
 ### Example Usage
+Create a new user:
+- POST /users
+
+Get user information:
+- GET /users
+
+Delete all users:
+- DELETE /users/delete_all
+
+Get user statistics:
+- GET /user_stats
 
 Count records by date:
 - GET /date?date=2024-09-26
@@ -45,7 +56,7 @@ Fetch all delays for a specific date (CSV format):
 - GET /date_records?date=2024-09-27&format=csv
 
 Fetch records with pagination:
-- GET /records?format=json&column=Reason&value=Heavy%20Traffic&limit=5&offset=0
+- GET /records?format=jason&column=Reason&value=Heavy%20Traffic&limit=5&offset=0
 
 Fetch a specific record by ID:
 - GET /record/1933906?format=json
