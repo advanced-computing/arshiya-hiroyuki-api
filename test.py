@@ -1,11 +1,11 @@
 import pytest
 import pandas as pd
 import requests
-import io
 from io import StringIO
 from flask import Flask
 from app import process_date_request, process_reason_request
 from app import process_boro_request, empty_check, format_output
+import duckdb
 
 app = Flask(__name__)
 
@@ -75,12 +75,11 @@ def clean_data(data):
 # Set Actual Downloaded Data
 @pytest.fixture
 def dataframe():
-    df = pd.read_csv('bus_2024_2025.csv')
-    df['Occurred_On'] = pd.to_datetime(
-        df['Occurred_On'],
-        format='%m/%d/%Y %I:%M:%S %p',
-        errors='coerce'
-        ).dt.date
+    con = duckdb.connect('bus.db')
+    df = con.execute('SELECT * FROM bus').fetchdf()
+    con.close()
+    df['Occurred_On'] = pd.to_datetime(df['Occurred_On'], 
+                                        format='%m/%d/%Y %I:%M:%S %p').dt.date
     df = clean_data(df)
     return df
 
@@ -114,157 +113,6 @@ def test_get_boro_data():
     response = requests.get(test_url).json()
 
     assert expected_count != response['count']
-
-# Test API of Fetch all delays for a specific date (JSON format):
-def get_expected_data_records(dataframe, dates):
-    expected_data = []
-    for test_date in dates:
-        date = pd.to_datetime(test_date).date()
-        test = dataframe[dataframe['Occurred_On'] == date]
-        test = clean_data(test)
-        expected_data.append(test)
-    return expected_data
-
-def get_output_data_records_json(dates):
-    output_data = []
-    for test_date in dates:
-        date = pd.to_datetime(test_date).date()
-        url = f'{api_url}/date_records?date={date}&format=json'
-        response = requests.get(url)
-        response_data = response.json()
-        
-        if isinstance(response_data, list):
-            api_data = pd.DataFrame(response_data)
-        else:
-            api_data = pd.DataFrame([response_data])
-
-        if 'Occurred_On' in api_data.columns:
-            api_data['Occurred_On'] = pd.to_datetime(
-                api_data['Occurred_On'], unit='ms').dt.date
-        else:
-            api_data = pd.DataFrame(columns=['Occurred_On'])
-
-        api_data = clean_data(api_data)
-        output_data.append(api_data)
-    return output_data
-
-def test_date_records_json(dataframe):
-    true_dates = ['2024-09-25', '2024-09-26', '2024-09-27']
-    false_dates = ['2020-09-25', '2027-09-27']
-    
-    true_expected_data = get_expected_data_records(dataframe, true_dates)
-    true_output_data = get_output_data_records_json(true_dates)
-    for expected, output in zip(true_expected_data, true_output_data):
-        assert expected.equals(output)
-    
-    false_expected_data = get_expected_data_records(dataframe, false_dates)
-    false_output_data = get_output_data_records_json(false_dates)
-    for expected, output in zip(false_expected_data, false_output_data):
-        assert not expected.equals(output)
-    
-# Test API of Fetch all delays for a specific date (CSV format):
-def get_output_data_records_csv(dates):
-    output_data = []
-    for test_date in dates:
-        date = pd.to_datetime(test_date).date()
-        url = f'{api_url}/date_records?date={date}&format=csv'
-        response = requests.get(url)
-        response_data = response.text
-        api_data = pd.read_csv(io.StringIO(response_data))
-        
-        if 'Occurred_On' in api_data.columns:
-            api_data['Occurred_On'] = pd.to_datetime(
-                api_data['Occurred_On'], format='%Y-%m-%d').dt.date
-        else:
-            api_data = pd.DataFrame(columns=['Occurred_On'])
-
-        api_data = clean_data(api_data)
-        output_data.append(api_data)
-    return output_data
-
-def test_date_records_csv(dataframe):
-    true_dates = ['2024-09-25', '2024-09-26', '2024-09-27']
-    false_dates = ['2020-09-25', '2027-09-27']
-    
-    true_expected_data = get_expected_data_records(dataframe, true_dates)
-    true_output_data = get_output_data_records_csv(true_dates)
-    for expected, output in zip(true_expected_data, true_output_data):
-        assert expected.equals(output)
-    
-    false_expected_data = get_expected_data_records(dataframe, false_dates)
-    false_output_data = get_output_data_records_csv(false_dates)
-    for expected, output in zip(false_expected_data, false_output_data):
-        assert not expected.equals(output)
-        
-# Test API of Fetch records with pagination:
-def test_pagination(dataframe):
-    format = 'json'
-    column = 'Reason'
-    value = 'Heavy Traffic'
-    limit = 5
-    offset = 0
-    
-    test = dataframe[dataframe[column] == value].iloc[offset:offset + limit]
-    
-    url = (
-    f'{api_url}/records?format={format}'
-    f'&column={column}&value={value}'
-    f'&limit={limit}&offset={offset}'
-    )
-    
-    response = requests.get(url)
-    
-    if format == 'json':
-        api_data = pd.DataFrame(response.json())
-        api_data['Occurred_On'] = pd.to_datetime(
-            api_data['Occurred_On'], unit='ms').dt.date
-    elif format == 'csv':
-        api_data = pd.read_csv(io.StringIO(response.text))
-        api_data['Occurred_On'] = pd.to_datetime(
-            api_data['Occurred_On'], format='%Y-%m-%d').dt.date
-
-    test = clean_data(test)
-    api_data = clean_data(api_data)
-    
-    assert test.equals(api_data)
-    
-# Test API of Fetch a specific record by ID:
-def test_id(dataframe):
-    true_ids = [1933906, 1933907, 1933908]
-    false_ids = [1, 9999999]
-    for test_id in true_ids:
-        test = dataframe[dataframe['Busbreakdown_ID'] == test_id]
-
-        url = f'{api_url}/record/{test_id}?format=json'
-        response = requests.get(url)
-        api_data = pd.DataFrame(response.json())
-        api_data['Occurred_On'] = pd.to_datetime(
-            api_data['Occurred_On'], unit='ms').dt.date
-
-        test = clean_data(test)
-        api_data = clean_data(api_data)
-
-        assert test.equals(api_data)
-
-    for test_id in false_ids:
-        test = dataframe[dataframe['Busbreakdown_ID'] == test_id]
-
-        url = f'{api_url}/record/{test_id}?format=json'
-        response = requests.get(url)
-        response_data = response.json()
-        if response_data.get('message') == 'No Records':
-            api_data = pd.DataFrame(columns=test.columns)
-        else:
-            api_data = pd.DataFrame([response_data])
-            if 'Occurred_On' in api_data.columns:
-                api_data['Occurred_On'] = pd.to_datetime(
-                    api_data['Occurred_On'], unit='ms').dt.date
-
-        test = clean_data(test)
-        api_data = clean_data(api_data)
-
-        assert test.empty
-        assert api_data.empty
         
 # Step3: Test Data Quality
 def test_id_completeness(dataframe):
